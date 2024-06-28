@@ -2,9 +2,12 @@ package golive
 
 import (
 	"encoding/json"
+	"fmt"
 	"golive/frontend"
 	"net/http"
+	"os"
 	"runtime"
+	"runtime/debug"
 	"time"
 
 	"github.com/klauspost/compress/gzhttp"
@@ -13,6 +16,8 @@ import (
 	"github.com/maxence-charriere/go-app/v10/pkg/app"
 )
 
+const prefix = "debug/live"
+
 var startTime time.Time
 
 func init() {
@@ -20,10 +25,10 @@ func init() {
 	frontend.Initialize()
 	http.HandleFunc("/_goliveapi", handler)
 
-	http.Handle("/_golive/*", http.StripPrefix("/_golive", gzhttp.GzipHandler(&app.Handler{
+	http.Handle(fmt.Sprintf("/%s/*", prefix), http.StripPrefix(fmt.Sprintf("/%s", prefix), gzhttp.GzipHandler(&app.Handler{
 		Name:        "Go Live",
 		Description: "Go monitoring dashboard",
-		Resources:   ResourceFS("_golive"),
+		Resources:   ResourceFS(prefix),
 		Scripts: []string{
 			"https://go-echarts.github.io/go-echarts-assets/assets/echarts.min.js",
 		},
@@ -41,19 +46,27 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// d, err := disk.Get()
-	// if err != nil {
-	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
+
+	memstats := new(runtime.MemStats)
+	runtime.ReadMemStats(memstats)
+
+	info, _ := debug.ReadBuildInfo()
+	hostname, _ := os.Hostname()
 
 	stats := frontend.Stats{
-		MemoryTotal: m.Total,
-		MemoryUsed:  m.Used,
-		MemoryFree:  m.Free,
-		CPUTotal:    uint64(runtime.NumCPU() * 100),
-		CPUUsed:     c.User + c.System,
-		Uptime:      uint64(time.Since(startTime).Seconds()),
+		MemoryTotal:  m.Total,
+		MemoryUsed:   m.Used,
+		MemoryFree:   m.Free,
+		CPUTotal:     uint64(runtime.NumCPU() * 100),
+		CPUUsed:      c.User + c.System,
+		Uptime:       uint64(time.Since(startTime).Seconds()),
+		Memstats:     memstats,
+		Stack:        debug.Stack(),
+		NumGoroutine: runtime.NumGoroutine(),
+		BuildInfo:    info,
+		Hostname:     hostname,
+		NumCPU:       runtime.NumCPU(),
+		NumCgoCall:   runtime.NumCgoCall(),
 	}
 
 	jsonstats, err := json.Marshal(stats)
