@@ -10,13 +10,19 @@ import (
 
 type dashboard struct {
 	app.Compo
-	stats Stats
+	stats   Stats
+	history []Stats
 }
 
 func (h *dashboard) Render() app.UI {
 	return app.Div().Body(
-		&CPUGauge{Stats: h.stats},
-		&MemoryGauge{Stats: h.stats},
+		app.Div().
+			Style("display", "flex").
+			Body(
+				&CPUGauge{Stats: h.stats},
+				&MemoryGauge{Stats: h.stats},
+				&CGoCalls{Stats: h.stats},
+			),
 	)
 }
 
@@ -37,6 +43,7 @@ func (h *dashboard) OnMount(ctx app.Context) {
 			}
 			resp.Body.Close()
 			ctx.Dispatch(func(ctx app.Context) {
+				h.history = append(h.history, h.stats)
 				h.stats = stats
 			})
 			time.Sleep(1 * time.Second)

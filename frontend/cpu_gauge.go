@@ -16,6 +16,16 @@ type CPUGauge struct {
 
 func (h *CPUGauge) Render() app.UI {
 	gauge := charts.NewGauge()
+	gauge.SetGlobalOptions(
+		charts.WithInitializationOpts(opts.Initialization{
+			Theme:  "dark",
+			Height: "300px",
+			Width:  "300px",
+		}),
+		charts.WithLegendOpts(opts.Legend{
+			Show: opts.Bool(false),
+		}),
+	)
 	value := h.Stats.CPUUsed - h.prev
 	h.prev = h.Stats.CPUUsed
 	total := h.Stats.CPUTotal

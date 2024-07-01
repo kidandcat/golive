@@ -15,6 +15,16 @@ type MemoryGauge struct {
 
 func (h *MemoryGauge) Render() app.UI {
 	gauge := charts.NewGauge()
+	gauge.SetGlobalOptions(
+		charts.WithInitializationOpts(opts.Initialization{
+			Theme:  "dark",
+			Height: "300px",
+			Width:  "300px",
+		}),
+		charts.WithLegendOpts(opts.Legend{
+			Show: opts.Bool(false),
+		}),
+	)
 	total := h.Stats.MemoryTotal
 	value := h.Stats.MemoryUsed
 	// percentage

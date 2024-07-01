@@ -16,7 +16,7 @@ import (
 	"github.com/maxence-charriere/go-app/v10/pkg/app"
 )
 
-const prefix = "debug/live"
+const prefix = "golive"
 
 var startTime time.Time
 
@@ -30,7 +30,11 @@ func init() {
 		Description: "Go monitoring dashboard",
 		Resources:   ResourceFS(prefix),
 		Scripts: []string{
-			"https://go-echarts.github.io/go-echarts-assets/assets/echarts.min.js",
+			"/web/echarts.min.js",
+		},
+		Styles: []string{
+			"/web/dark.css",
+			"/web/style.css",
 		},
 	})))
 }
@@ -61,7 +65,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		CPUUsed:      c.User + c.System,
 		Uptime:       uint64(time.Since(startTime).Seconds()),
 		Memstats:     memstats,
-		Stack:        debug.Stack(),
 		NumGoroutine: runtime.NumGoroutine(),
 		BuildInfo:    info,
 		Hostname:     hostname,

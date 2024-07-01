@@ -14,7 +14,6 @@ type Stats struct {
 	Uptime       uint64
 	Memstats     *runtime.MemStats
 	GCstats      *debug.GCStats
-	Stack        []byte
 	NumGoroutine int
 	BuildInfo    *debug.BuildInfo
 	Hostname     string
