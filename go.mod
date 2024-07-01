@@ -1,4 +1,4 @@
-module golive
+module github.com/kidandcat/golive
 
 go 1.22.4
 

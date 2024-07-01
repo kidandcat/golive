@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	_ "golive"
 	"net/http"
+
+	_ "github.com/kidandcat/golive"
 )
 
 func main() {

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"golive/frontend"
+	"github.com/kidandcat/golive/frontend"
 )
 
 func main() {

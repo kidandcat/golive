@@ -3,13 +3,13 @@ package golive
 import (
 	"encoding/json"
 	"fmt"
-	"golive/frontend"
 	"net/http"
 	"os"
 	"runtime"
 	"runtime/debug"
 	"time"
 
+	"github.com/kidandcat/golive/frontend"
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/mackerelio/go-osstat/cpu"
 	"github.com/mackerelio/go-osstat/memory"
