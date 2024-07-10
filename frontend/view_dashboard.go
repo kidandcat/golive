@@ -24,6 +24,11 @@ func (h *dashboard) Render() app.UI {
 				&CGoCalls{Stats: h.stats},
 				&Goroutines{Stats: h.stats},
 			),
+		app.Div().
+			Style("display", "flex").
+			Body(
+				&Trace{Stats: h.stats},
+			),
 	)
 }
 

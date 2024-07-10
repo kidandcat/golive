@@ -3,9 +3,13 @@ package frontend
 import (
 	"runtime"
 	"runtime/debug"
+	"sync"
+
+	gtrace "honnef.co/go/gotraceui/trace"
 )
 
 type Stats struct {
+	sync.RWMutex `json:"-"`
 	MemoryTotal  uint64
 	MemoryUsed   uint64
 	MemoryFree   uint64
@@ -19,4 +23,6 @@ type Stats struct {
 	Hostname     string
 	NumCPU       int
 	NumCgoCall   int64
+	TraceData    []byte
+	TraceEvents  []gtrace.Event
 }

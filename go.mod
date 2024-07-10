@@ -11,5 +11,7 @@ require (
 
 require (
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/smallnest/ringbuffer v0.0.0-20240423223918-bab516b2000b // indirect
 	golang.org/x/sys v0.20.0 // indirect
+	honnef.co/go/gotraceui v0.4.0 // indirect
 )
