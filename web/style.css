@@ -3,6 +3,10 @@
     --background: #110c2a;
 }
 
+body {
+    max-width: 100% !important;
+}
+
 
 
 /* --background-body

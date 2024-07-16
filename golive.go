@@ -4,12 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"runtime"
 	"runtime/debug"
-	"runtime/trace"
 	"time"
 
 	"github.com/kidandcat/golive/frontend"
@@ -17,11 +15,11 @@ import (
 	"github.com/mackerelio/go-osstat/cpu"
 	"github.com/mackerelio/go-osstat/memory"
 	"github.com/maxence-charriere/go-app/v10/pkg/app"
-	gtrace "honnef.co/go/gotraceui/trace"
+	"golang.org/x/exp/trace"
 )
 
 const prefix = "golive"
-const BUFFER_SIZE = 1024 * 1024
+const BUFFER_SIZE = 1024 * 1024 * 10
 
 var startTime time.Time
 
@@ -44,28 +42,20 @@ func init() {
 	})))
 }
 
-var traceBuffer = new(bytes.Buffer)
-var traceParser *gtrace.Parser
 var stats = frontend.Stats{}
 
 func collector() {
-	var err error
-	traceParser, err = gtrace.NewParser(traceBuffer)
-	if err != nil {
-		log.Fatalf("failed to create trace parser: %v", err)
-	}
-	if err := trace.Start(traceBuffer); err != nil {
-		log.Fatalf("failed to start trace: %v", err)
-	}
-	defer trace.Stop()
+	// Set up the flight recorder.
+	fr := trace.NewFlightRecorder()
+	fr.Start()
 	for {
 		c, err := cpu.Get()
 		if err != nil {
-			log.Printf("failed to get cpu stats: %v", err)
+			fmt.Printf("failed to get cpu stats: %v", err)
 		}
 		m, err := memory.Get()
 		if err != nil {
-			log.Printf("failed to get memory stats: %v", err)
+			fmt.Printf("failed to get memory stats: %v", err)
 		}
 
 		memstats := new(runtime.MemStats)
@@ -74,9 +64,17 @@ func collector() {
 		info, _ := debug.ReadBuildInfo()
 		hostname, _ := os.Hostname()
 
-		tt, err := traceParser.Parse()
+		// https://pkg.go.dev/runtime/metrics#example-Read-ReadingAllMetrics
+
+		// https://github.com/felixge/fgprof/blob/master/fgprof.go#L87
+
+		// https://www.datadoghq.com/blog/go-memory-metrics/#how-to-analyze-go-memory-usage
+
+		// Grab the snapshot.
+		var b bytes.Buffer
+		_, err = fr.WriteTo(&b)
 		if err != nil {
-			log.Printf("failed to parse trace: %v", err)
+			fmt.Printf("failed to write trace data: %v", err)
 		}
 
 		stats.Lock()
@@ -92,13 +90,7 @@ func collector() {
 		stats.Hostname = hostname
 		stats.NumCPU = runtime.NumCPU()
 		stats.NumCgoCall = runtime.NumCgoCall()
-		if traceBuffer.Len() > BUFFER_SIZE {
-			data := traceBuffer.Bytes()[traceBuffer.Len()-BUFFER_SIZE:]
-			traceBuffer.Reset()
-			traceBuffer = bytes.NewBuffer(data)
-		}
-		stats.TraceData = traceBuffer.Bytes()
-		stats.TraceEvents = tt.Events
+		stats.TraceData = b.Bytes()
 		stats.Unlock()
 		time.Sleep(1 * time.Second)
 	}

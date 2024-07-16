@@ -18,6 +18,8 @@ func (h *dashboard) Render() app.UI {
 	return app.Div().Body(
 		app.Div().
 			Style("display", "flex").
+			Style("align-items", "center").
+			Style("justify-content", "center").
 			Body(
 				&CPUGauge{Stats: h.stats},
 				&MemoryGauge{Stats: h.stats},

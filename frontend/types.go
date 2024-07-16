@@ -4,8 +4,6 @@ import (
 	"runtime"
 	"runtime/debug"
 	"sync"
-
-	gtrace "honnef.co/go/gotraceui/trace"
 )
 
 type Stats struct {
@@ -24,5 +22,4 @@ type Stats struct {
 	NumCPU       int
 	NumCgoCall   int64
 	TraceData    []byte
-	TraceEvents  []gtrace.Event
 }
