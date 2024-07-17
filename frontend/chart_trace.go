@@ -33,19 +33,31 @@ func (h *Trace) Render() app.UI {
 		}
 		switch ev.Kind() {
 		case trace.EventStateTransition:
-			if ev.StateTransition().Resource.Kind != trace.ResourceProc {
-				// events = append(events, fmt.Sprintf("NoProc: %v", ev.StateTransition().Resource.Kind))
-				continue
+			var from, to trace.ProcState
+			var gfrom, gto trace.GoState
+			if ev.StateTransition().Resource.Kind == trace.ResourceProc {
+				from, to = ev.StateTransition().Proc()
 			}
-			from, to := ev.StateTransition().Proc()
+			if ev.StateTransition().Resource.Kind == trace.ResourceGoroutine {
+				gfrom, gto = ev.StateTransition().Goroutine()
+			}
 			var stack string
 			if !ev.StateTransition().Stack.Frames(func(f trace.StackFrame) bool {
-				stack += fmt.Sprintf("%#v", f)
+				if f.Func != "" {
+					stack = f.Func
+				}
 				return true
 			}) {
 				stack = "failed to get stack"
 			}
-			events = append(events, fmt.Sprintf("%v to %v: %v   ---  %#v", from.String(), to.String(), stack, ev.String()))
+			if stack == "" {
+				continue
+			}
+			if from != to {
+				events = append(events, fmt.Sprintf("(%v -> %v) %v / %v  %v", from.String(), to.String(), stack, ev.StateTransition().Resource.Kind, ev.Time()))
+			} else {
+				events = append(events, fmt.Sprintf("(%v -> %v) %v / %v  %v", gfrom.String(), gto.String(), stack, ev.StateTransition().Reason, ev.Time()))
+			}
 		}
 	}
 	// Print what we found.

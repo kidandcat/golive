@@ -1,8 +1,8 @@
 package frontend
 
 import (
-	"runtime"
 	"runtime/debug"
+	"runtime/metrics"
 	"sync"
 )
 
@@ -14,7 +14,7 @@ type Stats struct {
 	CPUTotal     uint64
 	CPUUsed      uint64
 	Uptime       uint64
-	Memstats     *runtime.MemStats
+	Metrics      []metrics.Sample
 	GCstats      *debug.GCStats
 	NumGoroutine int
 	BuildInfo    *debug.BuildInfo

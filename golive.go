@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime"
 	"runtime/debug"
+	"runtime/metrics"
 	"time"
 
 	"github.com/kidandcat/golive/frontend"
@@ -45,6 +46,12 @@ func init() {
 var stats = frontend.Stats{}
 
 func collector() {
+	descs := metrics.All()
+	samples := make([]metrics.Sample, len(descs))
+	for i := range samples {
+		samples[i].Name = descs[i].Name
+	}
+	info, _ := debug.ReadBuildInfo()
 	// Set up the flight recorder.
 	fr := trace.NewFlightRecorder()
 	fr.Start()
@@ -58,13 +65,8 @@ func collector() {
 			fmt.Printf("failed to get memory stats: %v", err)
 		}
 
-		memstats := new(runtime.MemStats)
-		runtime.ReadMemStats(memstats)
-
-		info, _ := debug.ReadBuildInfo()
 		hostname, _ := os.Hostname()
-
-		// https://pkg.go.dev/runtime/metrics#example-Read-ReadingAllMetrics
+		metrics.Read(samples)
 
 		// https://github.com/felixge/fgprof/blob/master/fgprof.go#L87
 
@@ -78,13 +80,13 @@ func collector() {
 		}
 
 		stats.Lock()
+		stats.Metrics = samples
 		stats.MemoryTotal = m.Total
 		stats.MemoryUsed = m.Used
 		stats.MemoryFree = m.Free
 		stats.CPUTotal = uint64(runtime.NumCPU() * 100)
 		stats.CPUUsed = c.User + c.System
 		stats.Uptime = uint64(time.Since(startTime).Seconds())
-		stats.Memstats = memstats
 		stats.NumGoroutine = runtime.NumGoroutine()
 		stats.BuildInfo = info
 		stats.Hostname = hostname
