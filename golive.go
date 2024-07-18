@@ -55,6 +55,7 @@ func collector() {
 	// Set up the flight recorder.
 	fr := trace.NewFlightRecorder()
 	fr.Start()
+	var b bytes.Buffer
 	for {
 		c, err := cpu.Get()
 		if err != nil {
@@ -73,7 +74,7 @@ func collector() {
 		// https://www.datadoghq.com/blog/go-memory-metrics/#how-to-analyze-go-memory-usage
 
 		// Grab the snapshot.
-		var b bytes.Buffer
+		b.Reset()
 		_, err = fr.WriteTo(&b)
 		if err != nil {
 			fmt.Printf("failed to write trace data: %v", err)

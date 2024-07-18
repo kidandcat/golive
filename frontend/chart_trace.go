@@ -2,8 +2,10 @@ package frontend
 
 import (
 	"bytes"
+	"cmp"
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/maxence-charriere/go-app/v10/pkg/app"
 	"golang.org/x/exp/trace"
@@ -11,8 +13,15 @@ import (
 
 type Trace struct {
 	app.Compo
-	Xaxis []string
-	Stats Stats
+	Xaxis      []string
+	Stats      Stats
+	functions  map[string]*Function
+	goroutines map[int64]*Goroutine
+}
+
+func (h *Trace) OnMount(ctx app.Context) {
+	h.functions = make(map[string]*Function)
+	h.goroutines = make(map[int64]*Goroutine)
 }
 
 func (h *Trace) Render() app.UI {
@@ -22,7 +31,6 @@ func (h *Trace) Render() app.UI {
 		return app.Div().ID("trace").Text(fmt.Sprintf("failed to read trace: %v", err))
 	}
 
-	var events []string
 	for {
 		// Read the event.
 		ev, err := r.ReadEvent()
@@ -33,39 +41,59 @@ func (h *Trace) Render() app.UI {
 		}
 		switch ev.Kind() {
 		case trace.EventStateTransition:
-			var from, to trace.ProcState
-			var gfrom, gto trace.GoState
-			if ev.StateTransition().Resource.Kind == trace.ResourceProc {
-				from, to = ev.StateTransition().Proc()
-			}
-			if ev.StateTransition().Resource.Kind == trace.ResourceGoroutine {
-				gfrom, gto = ev.StateTransition().Goroutine()
-			}
 			var stack string
-			if !ev.StateTransition().Stack.Frames(func(f trace.StackFrame) bool {
+			ev.StateTransition().Stack.Frames(func(f trace.StackFrame) bool {
 				if f.Func != "" {
 					stack = f.Func
+				} else if stack == "" {
+					stack = fmt.Sprintf("%s:%d", f.File, f.Line)
 				}
 				return true
-			}) {
-				stack = "failed to get stack"
+			})
+			if ev.StateTransition().Resource.Kind == trace.ResourceProc {
+				_, to := ev.StateTransition().Proc()
+				h.functions[stack] = &Function{
+					Name:      stack,
+					State:     to.String(),
+					Timestamp: int64(ev.Time()),
+				}
 			}
-			if stack == "" {
-				continue
-			}
-			if from != to {
-				events = append(events, fmt.Sprintf("(%v -> %v) %v / %v  %v", from.String(), to.String(), stack, ev.StateTransition().Resource.Kind, ev.Time()))
-			} else {
-				events = append(events, fmt.Sprintf("(%v -> %v) %v / %v  %v", gfrom.String(), gto.String(), stack, ev.StateTransition().Reason, ev.Time()))
+			if ev.StateTransition().Resource.Kind == trace.ResourceGoroutine {
+				_, gto := ev.StateTransition().Goroutine()
+				if gto.String() == "NotExist" {
+					delete(h.goroutines, int64(ev.StateTransition().Resource.Goroutine()))
+					continue
+				}
+				h.goroutines[int64(ev.StateTransition().Resource.Goroutine())] = &Goroutine{
+					ID:        int64(ev.StateTransition().Resource.Goroutine()),
+					State:     gto.String(),
+					Reason:    ev.StateTransition().Reason,
+					Timestamp: int64(ev.Time()),
+				}
 			}
 		}
 	}
 	// Print what we found.
-	var lines []app.UI
-	for _, ev := range events {
-		lines = append(lines, app.Li().Text(fmt.Sprintf("%v", ev)))
+	var functions []*Function
+	for _, ev := range h.functions {
+		functions = append(functions, ev)
 	}
+	var goroutines []*Goroutine
+	for _, ev := range h.goroutines {
+		goroutines = append(goroutines, ev)
+	}
+	slices.SortFunc(functions, func(i, j *Function) int {
+		return cmp.Compare(i.Name, j.Name)
+	})
+	slices.SortFunc(goroutines, func(i, j *Goroutine) int {
+		return cmp.Compare(i.ID, j.ID)
+	})
 	return app.Div().ID("trace").Body(
-		lines...,
+		app.Range(functions).Slice(func(i int) app.UI {
+			return functions[i]
+		}),
+		app.Range(goroutines).Slice(func(i int) app.UI {
+			return goroutines[i]
+		}),
 	)
 }
