@@ -2,6 +2,7 @@ package frontend
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -10,8 +11,7 @@ import (
 
 type dashboard struct {
 	app.Compo
-	stats   Stats
-	history []Stats
+	stats Stats
 }
 
 func (h *dashboard) Render() app.UI {
@@ -21,8 +21,6 @@ func (h *dashboard) Render() app.UI {
 			Style("align-items", "center").
 			Style("justify-content", "center").
 			Body(
-				&CPUGauge{Stats: h.stats},
-				&MemoryGauge{Stats: h.stats},
 				&CGoCalls{Stats: h.stats},
 				&Goroutines{Stats: h.stats},
 			),
@@ -35,23 +33,27 @@ func (h *dashboard) Render() app.UI {
 }
 
 func (h *dashboard) OnMount(ctx app.Context) {
+	h.stats = Stats{}
 	ctx.Async(func() {
 		for {
 			// http request
 			origin := app.Window().Get("location").Get("origin").String()
 			resp, err := http.Get(origin + "/_goliveapi")
 			if err != nil {
-				panic(err)
+				fmt.Printf("failed to get stats: %v", err)
+				time.Sleep(2 * time.Second)
+				ctx.Reload()
 			}
 			// parse json
 			dec := json.NewDecoder(resp.Body)
 			stats := Stats{}
 			if err := dec.Decode(&stats); err != nil {
-				panic(err)
+				fmt.Printf("failed to decode stats: %v", err)
+				time.Sleep(2 * time.Second)
+				ctx.Reload()
 			}
 			resp.Body.Close()
 			ctx.Dispatch(func(ctx app.Context) {
-				h.history = append(h.history, h.stats)
 				h.stats = stats
 			})
 			time.Sleep(1 * time.Second)

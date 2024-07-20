@@ -19,8 +19,8 @@ func (h *CGoCalls) Render() app.UI {
 	gauge.SetGlobalOptions(
 		charts.WithInitializationOpts(opts.Initialization{
 			Theme:  "dark",
-			Height: "300px",
-			Width:  "300px",
+			Height: "250px",
+			Width:  "250px",
 		}),
 		charts.WithLegendOpts(opts.Legend{
 			Show: opts.Bool(false),

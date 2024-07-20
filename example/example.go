@@ -19,8 +19,11 @@ func main() {
 }
 
 func hellower() {
-	for {
-		time.Sleep(3 * time.Second)
+	time.Sleep(5 * time.Second)
+	for i := 0; i < 99999; i++ {
 		fmt.Println("Hello World")
 	}
+	go hellower()
+	time.Sleep(1 * time.Second)
+	fmt.Println("Bye World")
 }

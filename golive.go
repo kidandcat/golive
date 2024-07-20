@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"os"
 	"runtime"
@@ -13,8 +14,6 @@ import (
 
 	"github.com/kidandcat/golive/frontend"
 	"github.com/klauspost/compress/gzhttp"
-	"github.com/mackerelio/go-osstat/cpu"
-	"github.com/mackerelio/go-osstat/memory"
 	"github.com/maxence-charriere/go-app/v10/pkg/app"
 	"golang.org/x/exp/trace"
 )
@@ -51,26 +50,29 @@ func collector() {
 	for i := range samples {
 		samples[i].Name = descs[i].Name
 	}
-	info, _ := debug.ReadBuildInfo()
 	// Set up the flight recorder.
 	fr := trace.NewFlightRecorder()
+	fr.SetPeriod(999 * time.Millisecond)
 	fr.Start()
 	var b bytes.Buffer
+	var err error
+	var info *debug.BuildInfo
+	var ncpu int
+	var hostname string
+	var n int
 	for {
-		c, err := cpu.Get()
-		if err != nil {
-			fmt.Printf("failed to get cpu stats: %v", err)
-		}
-		m, err := memory.Get()
-		if err != nil {
-			fmt.Printf("failed to get memory stats: %v", err)
+		if n == math.MaxInt-1 {
+			n = 0
 		}
 
-		hostname, _ := os.Hostname()
+		if n%10 == 0 {
+			info, _ = debug.ReadBuildInfo()
+			ncpu = runtime.NumCPU()
+			hostname, _ = os.Hostname()
+		}
+
 		metrics.Read(samples)
-
 		// https://github.com/felixge/fgprof/blob/master/fgprof.go#L87
-
 		// https://www.datadoghq.com/blog/go-memory-metrics/#how-to-analyze-go-memory-usage
 
 		// Grab the snapshot.
@@ -80,22 +82,21 @@ func collector() {
 			fmt.Printf("failed to write trace data: %v", err)
 		}
 
+		uptime := uint64(time.Since(startTime).Seconds())
+		ngos := runtime.NumGoroutine()
+		ccgo := runtime.NumCgoCall()
 		stats.Lock()
 		stats.Metrics = samples
-		stats.MemoryTotal = m.Total
-		stats.MemoryUsed = m.Used
-		stats.MemoryFree = m.Free
-		stats.CPUTotal = uint64(runtime.NumCPU() * 100)
-		stats.CPUUsed = c.User + c.System
-		stats.Uptime = uint64(time.Since(startTime).Seconds())
-		stats.NumGoroutine = runtime.NumGoroutine()
+		stats.Uptime = uptime
+		stats.NumGoroutine = ngos
 		stats.BuildInfo = info
 		stats.Hostname = hostname
-		stats.NumCPU = runtime.NumCPU()
-		stats.NumCgoCall = runtime.NumCgoCall()
+		stats.NumCPU = ncpu
+		stats.NumCgoCall = ccgo
 		stats.TraceData = b.Bytes()
 		stats.Unlock()
-		time.Sleep(1 * time.Second)
+		time.Sleep(999 * time.Millisecond)
+		n++
 	}
 }
 

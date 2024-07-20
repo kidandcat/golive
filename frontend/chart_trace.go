@@ -2,10 +2,9 @@ package frontend
 
 import (
 	"bytes"
-	"cmp"
 	"fmt"
 	"io"
-	"slices"
+	"strings"
 
 	"github.com/maxence-charriere/go-app/v10/pkg/app"
 	"golang.org/x/exp/trace"
@@ -13,15 +12,8 @@ import (
 
 type Trace struct {
 	app.Compo
-	Xaxis      []string
-	Stats      Stats
-	functions  map[string]*Function
-	goroutines map[int64]*Goroutine
-}
-
-func (h *Trace) OnMount(ctx app.Context) {
-	h.functions = make(map[string]*Function)
-	h.goroutines = make(map[int64]*Goroutine)
+	Xaxis []string
+	Stats Stats
 }
 
 func (h *Trace) Render() app.UI {
@@ -31,6 +23,7 @@ func (h *Trace) Render() app.UI {
 		return app.Div().ID("trace").Text(fmt.Sprintf("failed to read trace: %v", err))
 	}
 
+	gmap := map[string]*Goroutine{}
 	for {
 		// Read the event.
 		ev, err := r.ReadEvent()
@@ -42,58 +35,48 @@ func (h *Trace) Render() app.UI {
 		switch ev.Kind() {
 		case trace.EventStateTransition:
 			var stack string
+			var stacks []string
 			ev.StateTransition().Stack.Frames(func(f trace.StackFrame) bool {
-				if f.Func != "" {
-					stack = f.Func
-				} else if stack == "" {
-					stack = fmt.Sprintf("%s:%d", f.File, f.Line)
+				if f.Func == "" {
+					return true
 				}
+				stacks = append(stacks, f.Func)
 				return true
 			})
-			if ev.StateTransition().Resource.Kind == trace.ResourceProc {
-				_, to := ev.StateTransition().Proc()
-				h.functions[stack] = &Function{
-					Name:      stack,
-					State:     to.String(),
-					Timestamp: int64(ev.Time()),
-				}
-			}
+			stack = strings.Join(stacks, " | ")
 			if ev.StateTransition().Resource.Kind == trace.ResourceGoroutine {
+				gID := fmt.Sprintf("%05d\n", int64(ev.StateTransition().Resource.Goroutine())*-1)
 				_, gto := ev.StateTransition().Goroutine()
 				if gto.String() == "NotExist" {
-					delete(h.goroutines, int64(ev.StateTransition().Resource.Goroutine()))
+					delete(gmap, gID)
 					continue
 				}
-				h.goroutines[int64(ev.StateTransition().Resource.Goroutine())] = &Goroutine{
-					ID:        int64(ev.StateTransition().Resource.Goroutine()),
-					State:     gto.String(),
-					Reason:    ev.StateTransition().Reason,
-					Timestamp: int64(ev.Time()),
+				g, ok := gmap[gID]
+				if ok {
+					if stack != "" {
+						g.Stack = stack
+					}
+					g.State = gto.String()
+					g.Reason = ev.StateTransition().Reason
+					g.Timestamp = int64(ev.Time())
+				} else {
+					gmap[gID] = &Goroutine{
+						ID:        gID,
+						Stack:     stack,
+						State:     gto.String(),
+						Reason:    ev.StateTransition().Reason,
+						Timestamp: int64(ev.Time()),
+					}
 				}
 			}
 		}
 	}
 	// Print what we found.
-	var functions []*Function
-	for _, ev := range h.functions {
-		functions = append(functions, ev)
-	}
-	var goroutines []*Goroutine
-	for _, ev := range h.goroutines {
-		goroutines = append(goroutines, ev)
-	}
-	slices.SortFunc(functions, func(i, j *Function) int {
-		return cmp.Compare(i.Name, j.Name)
-	})
-	slices.SortFunc(goroutines, func(i, j *Goroutine) int {
-		return cmp.Compare(i.ID, j.ID)
-	})
-	return app.Div().ID("trace").Body(
-		app.Range(functions).Slice(func(i int) app.UI {
-			return functions[i]
-		}),
-		app.Range(goroutines).Slice(func(i int) app.UI {
-			return goroutines[i]
-		}),
-	)
+	return app.Div().ID("trace").
+		Style("margin-left", "50px").
+		Body(
+			app.Range(gmap).Map(func(id string) app.UI {
+				return gmap[id]
+			}),
+		)
 }
