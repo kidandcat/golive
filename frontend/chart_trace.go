@@ -42,7 +42,7 @@ func (h *Trace) ProcessData(functions []*Function) {
 			if _, ok := noduplicate[s]; ok {
 				continue
 			}
-			h.nodes = append(h.nodes, opts.SankeyNode{Name: s})
+			h.nodes = append(h.nodes, opts.SankeyNode{Name: fmt.Sprintf("%s (%v)", s, f.Status)})
 			noduplicate[s] = struct{}{}
 		}
 		for i := 0; i < len(ss)-1; i++ {
@@ -50,8 +50,8 @@ func (h *Trace) ProcessData(functions []*Function) {
 				continue
 			}
 			h.links = append(h.links, opts.SankeyLink{
-				Source: ss[i],
-				Target: ss[i+1],
+				Source: fmt.Sprintf("%s (%v)", ss[i], f.Status),
+				Target: fmt.Sprintf("%s (%v)", ss[i+1], f.Status),
 				Value:  float32(f.Time.Seconds()),
 			})
 			noduplicate[ss[i]+"-"+ss[i+1]] = struct{}{}
@@ -140,6 +140,7 @@ func (h *Trace) Render() app.UI {
 					if f.Started[gid] == (time.Time{}) {
 						f.Started[gid] = time.Unix(0, g.Timestamp)
 					}
+					f.Status = g.State
 					// If the goroutine is not running a function, stop the function.
 					if g.Stack != oldStack && oldStack != "" {
 						oldStacks := strings.Split(oldStack, " | ")
