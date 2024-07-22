@@ -19,11 +19,13 @@ func main() {
 }
 
 func hellower() {
+	var count uint
 	time.Sleep(5 * time.Second)
-	for i := 0; i < 99999; i++ {
-		fmt.Println("Hello World")
+	fmt.Println("Hello World")
+	for i := 0; i < 9999999; i++ {
+		count += uint(i)
 	}
 	go hellower()
 	time.Sleep(1 * time.Second)
-	fmt.Println("Bye World")
+	fmt.Println("Bye World", count)
 }

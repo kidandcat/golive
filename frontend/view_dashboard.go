@@ -15,21 +15,7 @@ type dashboard struct {
 }
 
 func (h *dashboard) Render() app.UI {
-	return app.Div().Body(
-		app.Div().
-			Style("display", "flex").
-			Style("align-items", "center").
-			Style("justify-content", "center").
-			Body(
-				&CGoCalls{Stats: h.stats},
-				&Goroutines{Stats: h.stats},
-			),
-		app.Div().
-			Style("display", "flex").
-			Body(
-				&Trace{Stats: h.stats},
-			),
-	)
+	return &Trace{Stats: h.stats}
 }
 
 func (h *dashboard) OnMount(ctx app.Context) {

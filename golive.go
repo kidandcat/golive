@@ -19,7 +19,6 @@ import (
 )
 
 const prefix = "golive"
-const BUFFER_SIZE = 1024 * 1024 * 10
 
 var startTime time.Time
 
@@ -71,7 +70,7 @@ func collector() {
 			hostname, _ = os.Hostname()
 		}
 
-		metrics.Read(samples)
+		// metrics.Read(samples)
 		// https://github.com/felixge/fgprof/blob/master/fgprof.go#L87
 		// https://www.datadoghq.com/blog/go-memory-metrics/#how-to-analyze-go-memory-usage
 
@@ -86,7 +85,7 @@ func collector() {
 		ngos := runtime.NumGoroutine()
 		ccgo := runtime.NumCgoCall()
 		stats.Lock()
-		stats.Metrics = samples
+		// stats.Metrics = samples
 		stats.Uptime = uptime
 		stats.NumGoroutine = ngos
 		stats.BuildInfo = info
