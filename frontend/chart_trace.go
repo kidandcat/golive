@@ -169,9 +169,9 @@ func (h *Trace) Render() app.UI {
 		return int(j.Time - i.Time)
 	})
 
-	// Keep only the top 10 functions.
-	if len(functions) > 10 {
-		functions = functions[:10]
+	// Keep only the top MAX_FUNCTIONS functions.
+	if len(functions) > MAX_FUNCTIONS {
+		functions = functions[:MAX_FUNCTIONS]
 	}
 
 	// Process the data.
