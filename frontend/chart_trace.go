@@ -34,10 +34,6 @@ func (h *Trace) ProcessData(functions []*Function) {
 	noduplicate := map[string]struct{}{}
 	for _, f := range functions {
 		ss := strings.Split(f.Stack, " | ")
-		// reverse the stack
-		for i, j := 0, len(ss)-1; i < j; i, j = i+1, j-1 {
-			ss[i], ss[j] = ss[j], ss[i]
-		}
 		for _, s := range ss {
 			if _, ok := noduplicate[s]; ok {
 				continue

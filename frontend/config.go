@@ -1,3 +1,3 @@
 package frontend
 
-const MAX_FUNCTIONS = 20
+const MAX_FUNCTIONS = 30
