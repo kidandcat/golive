@@ -14,6 +14,8 @@ import (
 	"golang.org/x/exp/trace"
 )
 
+// TODO: space key pauses the stream
+
 type Trace struct {
 	app.Compo
 	chartComponent
