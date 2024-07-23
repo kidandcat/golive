@@ -7,3 +7,5 @@ Experiment to have a live view of where in the code is a Go program spending tim
 - Import `_ "github.com/kidandcat/golive"` in your Go program
 - Spin up a web server with the default mux
 - Visit `/golive` in your web server
+
+![screenshot](example/screenshot.png)
